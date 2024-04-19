@@ -13,7 +13,10 @@ def check_light(frame):
         return True
 
 def generate_frames():
-    cap = cv2.VideoCapture(0)
+    #cap = cv2.VideoCapture(0)
+    cap=cv2.VideoCapture(0,cv2.CAP_DSHOW) #// if you have second camera you can set first parameter as 1
+    if not (cap.isOpened()):
+        print("Could not open video device")
     start_time = time.time()
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     out = cv2.VideoWriter('videos/output.avi', fourcc, 20.0, (640, 480))
