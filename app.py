@@ -1,11 +1,10 @@
-# Flask App
 from flask import Flask, render_template, Response, request
 import cv2
 import numpy as np
 
 app = Flask(__name__)
 
-prev_light_status = None  # Variable to store previous light status
+prev_light_status = None  
 
 def check_light(frame):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -16,9 +15,6 @@ def check_light(frame):
         return True
 
 def process_frame(frame):
-    # Add your video processing logic here
-    # For example, you can apply filters, detect objects, etc.
-    # Return the processed frame
     return frame
 
 @app.route('/')
@@ -27,25 +23,21 @@ def index():
 
 @app.route('/video_feed', methods=['POST'])
 def video_feed():
-    global prev_light_status  # Access global variable
+    global prev_light_status  
 
-    # Get the frame sent from the client
     frame = request.files['frame'].read()
 
-    # Convert frame to numpy array
     nparr = np.frombuffer(frame, np.uint8)
     frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
     current_light_status = check_light(frame)
 
-    # Check if the current light status differs from the previous one
     if current_light_status != prev_light_status:
         if current_light_status:
             print("Enough light. Processing video...")
         else:
             print("Not enough light. Please increase light.")
         
-        # Update the previous light status
         prev_light_status = current_light_status
 
     if current_light_status:
