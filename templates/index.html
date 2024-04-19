@@ -1,12 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Capture</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Webcam Stream</title>
 </head>
 <body>
-    <h1>Live Video Feed</h1>
-    <img src="{{ url_for('video_feed') }}" width="640" height="480">
+  <h1>Webcam Stream</h1>
+  <video id="video" width="640" height="480" autoplay></video>
+  <h2>Processed Frame</h2>
+  <img id="processed-frame" src="" width="640" height="480" alt="Processed Frame">
+  <script>
+    const video = document.getElementById('video');
+    const processedFrame = document.getElementById('processed-frame');
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        video.srcObject = stream;
+      })
+      .catch(error => {
+        console.error('Error accessing webcam:', error);
+      });
+
+    video.addEventListener('play', () => {
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      setInterval(() => {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(blob => {
+          const formData = new FormData();
+          formData.append('frame', blob);
+          fetch('/video_feed', {
+            method: 'POST',
+            body: formData
+          })
+          .then(response => response.blob())
+          .then(blob => {
+            const imgUrl = URL.createObjectURL(blob);
+            processedFrame.src = imgUrl;
+          })
+          .catch(error => {
+            console.error('Error sending video frame:', error);
+          });
+        }, 'image/jpeg');
+      }, 1000);
+    });
+  </script>
 </body>
 </html>
