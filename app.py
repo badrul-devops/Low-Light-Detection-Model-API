@@ -1,6 +1,7 @@
-from flask import Flask, render_template, Response, request, jsonify
+from flask import Flask, render_template, Response, request, jsonify, send_file
 import cv2
 import numpy as np
+import os
 
 app = Flask(__name__)
 
@@ -67,7 +68,7 @@ def video_feed():
                             b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n',
                             mimetype='multipart/x-mixed-replace; boundary=frame')
         else:
-            return jsonify({'message': 'Recording not started.'})
+            return jsonify({'message': 'Recording stopped.'})
     else:
         return jsonify({'error': 'Not enough light. Recording paused.'}), 500
 
@@ -83,6 +84,11 @@ def stop_recording():
     recording = False
     save_video()
     return jsonify({'message': 'Recording stopped. Video saved.'})
+
+@app.route('/output.mp4')
+def download_video():
+    video_path = 'output.mp4'  # Path to your video file
+    return send_file(video_path, as_attachment=True)
 
 if __name__ == "__main__":
     app.run(debug=True)
