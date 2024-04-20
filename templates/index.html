@@ -7,16 +7,63 @@
 </head>
 <body>
   <h1>Webcam Stream</h1>
-  <video id="video" width="640" height="480" autoplay></video>
-  <h2>Processed Frame</h2>
-  <img id="processed-frame" src="" width="640" height="480" alt="Processed Frame">
+  <video id="video" autoplay></video>
+  <h3 id="message"></h3>
+  <button id="start-recording">Start Recording</button>
+  <button id="stop-recording">Stop Recording</button>
   <script>
     const video = document.getElementById('video');
-    const processedFrame = document.getElementById('processed-frame');
+    const messageDiv = document.getElementById('message');
+    const startRecordingButton = document.getElementById('start-recording');
+    const stopRecordingButton = document.getElementById('stop-recording');
+
+    let recording = false;
+
+    startRecordingButton.addEventListener('click', () => {
+      fetch('/start_recording', {
+        method: 'POST'
+      })
+      .then(response => {
+        if (response.ok) {
+          console.log('Recording started.');
+          recording = true;
+        } else {
+          console.error('Failed to start recording.');
+        }
+      })
+      .catch(error => {
+        console.error('Error starting recording:', error);
+      });
+    });
+
+    stopRecordingButton.addEventListener('click', () => {
+      fetch('/stop_recording', {
+        method: 'POST'
+      })
+      .then(response => {
+        if (response.ok) {
+          console.log('Recording stopped.');
+          recording = false;
+        } else {
+          console.error('Failed to stop recording.');
+        }
+      })
+      .catch(error => {
+        console.error('Error stopping recording:', error);
+      });
+    });
 
     navigator.mediaDevices.getUserMedia({ video: true })
       .then(stream => {
         video.srcObject = stream;
+        const track = stream.getVideoTracks()[0];
+        const settings = track.getSettings();
+        const aspectRatio = settings.aspectRatio;
+        const width = settings.width >= 1920 ? 1920 : settings.width; // Limit width to maximum 1920
+        const height = Math.round(width / aspectRatio);
+
+        video.width = width;
+        video.height = height;
       })
       .catch(error => {
         console.error('Error accessing webcam:', error);
@@ -25,25 +72,37 @@
     video.addEventListener('play', () => {
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d');
-      setInterval(() => {
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob(blob => {
-          const formData = new FormData();
-          formData.append('frame', blob);
-          fetch('/video_feed', {
-            method: 'POST',
-            body: formData
-          })
-          .then(response => response.blob())
-          .then(blob => {
-            const imgUrl = URL.createObjectURL(blob);
-            processedFrame.src = imgUrl;
-          })
-          .catch(error => {
-            console.error('Error sending video frame:', error);
-          });
-        }, 'image/jpeg');
-      }, 1000);
+      const sendFrame = () => {
+        if (recording) {
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(blob => {
+            const formData = new FormData();
+            formData.append('frame', blob);
+            fetch('/video_feed', {
+              method: 'POST',
+              body: formData
+            })
+            .then(response => {
+              if (response.ok) {
+                return response.json();
+              } else {
+                throw new Error('Network response was not ok');
+              }
+            })
+            .then(data => {
+              if (data.message) {
+                messageDiv.textContent = data.message;
+              } else if (data.error) {
+                console.error(data.error);
+              }
+            })
+            .catch(error => {
+              console.error('Error receiving JSON response:', error);
+            });
+          }, 'image/jpeg');
+        }
+      };
+      setInterval(sendFrame, 1000);
     });
   </script>
 </body>
