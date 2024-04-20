@@ -16,17 +16,11 @@ def check_light(frame):
     else:
         return True
 
-def process_frame(frame):
-    # Add your video processing logic here
-    # For example, you can apply filters, detect objects, etc.
-    # Return the processed frame
-    return frame
-
 def save_video():
     global frames
     if len(frames) > 0:
         height, width, _ = frames[0].shape
-        out = cv2.VideoWriter('output.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 20.0, (width, height))
+        out = cv2.VideoWriter('output.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 5.0, (width, height))
         for frame in frames:
             out.write(frame)
         out.release()
@@ -64,9 +58,10 @@ def video_feed():
 
     if current_light_status:
         if recording:
-            processed_frame = process_frame(frame)
-            frames.append(processed_frame)
-            ret, buffer = cv2.imencode('.jpg', processed_frame)
+            # Resize frame to 720p
+            frame = cv2.resize(frame, (1280, 720))
+            frames.append(frame)
+            ret, buffer = cv2.imencode('.jpg', frame)
             frame = buffer.tobytes()
             return Response(b'--frame\r\n'
                             b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n',
